@@ -120,6 +120,26 @@ AS_IF([test x"$hardening" != x"no"], [
 AC_SUBST([HARDEN_CFLAGS])
 AC_SUBST([HARDEN_LDFLAGS])
 
+AC_ARG_ENABLE([static],
+  [AS_HELP_STRING([--enable-static],
+    [create a static build @<:@yes@:>@])],
+  [static="$enableval"],
+  [static="no"])
+
+STATIC_CFLAGS=""
+STATIC_LDFLAGS=""
+AS_IF([test x"$static" != x"no"], [
+  check_cc_cxx_flag([-static],
+   [check_link_flag([-static],
+     [STATIC_CFLAGS="$STATIC_CFLAGS -static"
+      STATIC_LDFLAGS="$STATIC_LDFLAGS -static"],
+     [check_link_flag([-static],
+       [STATIC_CFLAGS="$STATIC_CFLAGS -static"
+        STATIC_LDFLAGS="$STATIC_LDFLAGS -static"])])])])
+
+AC_SUBST([STATIC_CFLAGS])
+AC_SUBST([STATIC_LDFLAGS])
+
 # Also check for a few non-hardening-related flags.
 MISC_CXXFLAGS=""
 AC_LANG_PUSH(C++)
@@ -509,4 +529,5 @@ AC_MSG_NOTICE([c++ compiler:        $CXX])
 AC_MSG_NOTICE([Warning CXXFLAGS:    $WARNING_CXXFLAGS])
 AC_MSG_NOTICE([Picky CXXFLAGS:      $PICKY_CXXFLAGS])
 AC_MSG_NOTICE([Harden CFLAGS:       $HARDEN_CFLAGS])
+AC_MSG_NOTICE([Static CFLAGS:       $STATIC_CFLAGS])
 AC_MSG_NOTICE([ =============================])
