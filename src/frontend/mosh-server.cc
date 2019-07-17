@@ -98,7 +98,8 @@ static void serve( int host_fd,
 		   Terminal::Complete &terminal,
 		   ServerConnection &network,
 		   long network_timeout,
-		   long network_signaled_timeout );
+		   long network_signaled_timeout,
+		   long timeout_if_no_client );
 
 static int run_server( const char *desired_ip, const char *desired_port,
 		       const string &command_path, char *command_argv[],
@@ -395,6 +396,21 @@ static int run_server( const char *desired_ip, const char *desired_port,
       network_signaled_timeout = 0;
     }
   }
+  /* get network signaled idle timeout */
+  long timeout_if_no_client = 60;
+  char *noclnt_tmout = getenv( "MOSH_SERVER_NO_CLIENT_TMOUT" );
+  if ( noclnt_tmout && *noclnt_tmout ) {
+    errno = 0;
+    char *endptr;
+    timeout_if_no_client = strtol( noclnt_tmout, &endptr, 10 );
+    if ( *endptr != '\0' || ( timeout_if_no_client == 0 && errno == EINVAL ) ) {
+      fprintf( stderr, "MOSH_SERVER_NO_CLIENT_TMOUT not a valid integer, ignoring\n" );
+    } else if ( timeout_if_no_client < 0 ) {
+      fprintf( stderr, "MOSH_SERVER_NO_CLIENT_TMOUT is negative, ignoring\n" );
+      timeout_if_no_client = 60;
+    }
+  }
+
   /* get initial window size */
   struct winsize window_size;
   if ( ioctl( STDIN_FILENO, TIOCGWINSZ, &window_size ) < 0 ||
@@ -602,7 +618,7 @@ static int run_server( const char *desired_ip, const char *desired_port,
 #endif
 
     try {
-      serve( master, terminal, *network, network_timeout, network_signaled_timeout );
+      serve( master, terminal, *network, network_timeout, network_signaled_timeout, timeout_if_no_client );
     } catch ( const Network::NetworkException &e ) {
       fprintf( stderr, "Network exception: %s\n",
 	       e.what() );
@@ -628,11 +644,12 @@ static int run_server( const char *desired_ip, const char *desired_port,
   return 0;
 }
 
-static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &network, long network_timeout, long network_signaled_timeout )
+static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &network, long network_timeout, long network_signaled_timeout, long timeout_if_no_client )
 {
   /* scale timeouts */
   const uint64_t network_timeout_ms = static_cast<uint64_t>( network_timeout ) * 1000;
   const uint64_t network_signaled_timeout_ms = static_cast<uint64_t>( network_signaled_timeout ) * 1000;
+  const uint64_t timeout_if_no_client_ms = static_cast<uint64_t>( timeout_if_no_client ) * 1000;
   /* prepare to poll for events */
   Select &sel = Select::get_instance();
   sel.add_signal( SIGTERM );
@@ -652,7 +669,6 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
 
   while ( 1 ) {
     try {
-      static const uint64_t timeout_if_no_client = 60000;
       int timeout = INT_MAX;
       uint64_t now = Network::timestamp();
 
@@ -870,9 +886,9 @@ static void serve( int host_fd, Terminal::Complete &terminal, ServerConnection &
       }
 
       if ( !network.get_remote_state_num()
-           && time_since_remote_state >= timeout_if_no_client ) {
+           && time_since_remote_state >= timeout_if_no_client_ms ) {
         fprintf( stderr, "No connection within %llu seconds.\n",
-                 static_cast<unsigned long long>( timeout_if_no_client / 1000 ) );
+                 static_cast<unsigned long long>( timeout_if_no_client_ms / 1000 ) );
         break;
       }
 
