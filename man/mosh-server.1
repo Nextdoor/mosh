@@ -114,6 +114,12 @@ always terminate \fBmosh-server\fP.  Users and administrators may
 implement scripts to clean up disconnected Mosh sessions.  With this
 variable set, a user or administrator can issue
 
+.TP
+.B MOSH_SERVER_NO_CLIENT_TMOUT
+If this variable is set to a positive integer number, it specifies how
+long (in seconds) \fBmosh-server\fP will wait for a client before
+exiting. The default is 60 seconds.
+
 .nf
 $ pkill -SIGUSR1 mosh-server
 .fi
