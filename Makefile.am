@@ -15,29 +15,29 @@ OCLINT_OPTIONS = -enable-global-analysis -max-priority-2=1000 -max-priority-3=10
 	-rc SHORT_VARIABLE_NAME=1 \
 	-rc MINIMUM_CASES_IN_SWITCH=2
 
-.PHONY:	VERSION
+.PHONY:	VERSION.txt
 
-VERSION:
+VERSION.txt:
 	@echo @PACKAGE_STRING@ > VERSION.dist
 	@set -e; if git describe --dirty --always > VERSION.git 2>&1 && \
 		[ -z `git rev-parse --show-prefix` ]; then \
-		if ! diff -q VERSION.git VERSION > /dev/null 2>&1; then \
-			mv -f VERSION.git VERSION; \
+		if ! diff -q VERSION.git VERSION.txt > /dev/null 2>&1; then \
+			mv -f VERSION.git VERSION.txt; \
 		fi; \
-	elif ! diff -q VERSION.dist VERSION > /dev/null 2>&1; then \
-		mv -f VERSION.dist VERSION; \
+	elif ! diff -q VERSION.dist VERSION.txt > /dev/null 2>&1; then \
+		mv -f VERSION.dist VERSION.txt; \
 	fi
 	@rm -f VERSION.dist VERSION.git
 
-version.h:	VERSION
-	@printf '#define BUILD_VERSION "%s"\n' "$$(cat VERSION)" > version.h.new
+version.h:	VERSION.txt
+	@printf '#define BUILD_VERSION "%s"\n' "$$(cat VERSION.txt)" > version.h.new
 	@set -e; if ! diff -q version.h version.h.new > /dev/null 2>&1; then \
 		mv -f version.h.new version.h; \
 	fi
 	@rm -f version.h.new
 
 clean-local:
-	@rm -rf version.h VERSION cov-int mosh-coverity.txz compile_commands.json
+	@rm -rf version.h VERSION.txt cov-int mosh-coverity.txz compile_commands.json
 
 # Linters and static checkers, for development only.  Not included in
 # build dependencies, and outside of Automake processing.
